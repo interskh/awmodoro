@@ -26,6 +26,13 @@ local function update(_awmodoro)
 	_awmodoro:emit_signal("widget::updated")
 end
 
+local function log_to_file(filepath, str)
+    file = io.open(filepath, "a")
+    io.output(file)
+    io.write(os.date("%x %X ") .. str .. "\n")
+    io.close(file)
+end
+
 function awmodoro.draw(_awmodoro, wibox, cr, width, height)
 	data[_awmodoro].bar:draw(wibox, cr, width, height)
 end
@@ -42,6 +49,7 @@ function awmodoro:begin()
 		update(self)
 		data[self].timer:start()
 		if data[self].do_notify then naughty.notify({text = "Pomodoro Begin"}) end
+        if data[self].log then log_to_file(data[self].log, "start") end
 	end
 end
 
@@ -50,6 +58,7 @@ function awmodoro:pause()
 	data[self].bar:set_background_color(data[self].paused_bg_color)
 	update(self)
     if data[self].do_notify then naughty.notify({text = "Pomodoro Paused"}) end
+    if data[self].log then log_to_file(data[self].log, "pause") end
 end
 
 function awmodoro:resume()
@@ -57,6 +66,7 @@ function awmodoro:resume()
 	update(self)
 	data[self].timer:start()
     if data[self].do_notify then naughty.notify({text = "Pomodoro Resumed"}) end
+    if data[self].log then log_to_file(data[self].log, "resume") end
 end
 
 function awmodoro:finish()
@@ -64,6 +74,7 @@ function awmodoro:finish()
 	data[self].elapsed = data[self].seconds
 	update(self)
     if data[self].do_notify then naughty.notify({text = "Pomodoro Finished"}) end
+    if data[self].log then log_to_file(data[self].log, "finish") end
 	if data[self].finish_callback then data[self].finish_callback() end
 end
 
@@ -71,6 +82,7 @@ function awmodoro:reset()
 	data[self].elapsed = 0
 	update(self)
     if data[self].do_notify then naughty.notify({text = "Pomodoro Reset"}) end
+    if data[self].log then log_to_file(data[self].log, "reset") end
 end
 
 function awmodoro:toggle()
@@ -104,12 +116,13 @@ function awmodoro.new(args)
 	
 	local fg_color = args.fg_color or {type = "linear", from = {0,0}, to = {width, 0}, stops = {{0, "#AECF96"},{0.5, "#88A175"},{1, "#FF5656"}}}
 	local do_notify = args.do_notify or false
+	local log = args.log or false
 
 	local _awmodoro = base.make_widget()
 
 	local bar = awful.widget.progressbar.new({width = width, height = height})
 
-	data[_awmodoro] = { width = width, height = height, seconds = seconds, elapsed = 0, timer = timer({ timeout = 1 }), bar = bar, active_bg_color = active_bg_color, paused_bg_color = paused_bg_color, do_notify = do_notify}
+	data[_awmodoro] = { width = width, height = height, seconds = seconds, elapsed = 0, timer = timer({ timeout = 1 }), bar = bar, active_bg_color = active_bg_color, paused_bg_color = paused_bg_color, do_notify = do_notify, log = log}
 
 	if args.finish_callback then data[_awmodoro].finish_callback = args.finish_callback end
 	if args.begin_callback then data[_awmodoro].begin_callback = args.begin_callback end
